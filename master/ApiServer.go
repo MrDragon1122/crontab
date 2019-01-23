@@ -183,6 +183,14 @@ func InitApiServer() (err error) {
 	mux.HandleFunc("/job/list", handleJobList)
 	mux.HandleFunc("/job/kill", handlerJobKill)
 
+	// 知识点：路由匹配时支持最大路由匹配原则
+
+	// http支持静态路由文件
+	// 静态文件目录  开发前端页面，调用后端的接口，实现前后端分离的操作
+	staticDir := http.Dir(G_config.WebRoot)
+	staticHandler := http.FileServer(staticDir)
+	mux.Handle("/", http.StripPrefix("/", staticHandler)) // stripprefix函数的作用是对路由规则进行二次处理，去掉多余的路由规则 ./webroot/index.html
+
 	// 启动TCP监听
 	var listener net.Listener
 	if listener, err = net.Listen("tcp", ":"+strconv.Itoa(G_config.ApiPort)); err != nil {
