@@ -50,7 +50,7 @@ func InitJobMgr() (err error) {
 func (jobMgr *JobMgr) SaveJob(job *common.Job) (oldJob common.Job, err error) {
 	// 把任务保存到/cron/jobs/任务名 -> json
 	// 定义etcd的key ： value
-	jobKey := "/cron/jobs/" + job.Name
+	jobKey := common.JOB_SAVE_DIR + job.Name
 
 	jobValue, err := json.Marshal(job)
 	if err != nil {
@@ -76,7 +76,7 @@ func (jobMgr *JobMgr) SaveJob(job *common.Job) (oldJob common.Job, err error) {
 // 删除job
 func (jobMgr *JobMgr) DelJob(name string) (oldJobs []common.Job, err error) {
 	// 构建key
-	jobKey := "/cron/jobs/" + name
+	jobKey := common.JOB_SAVE_DIR + name
 
 	// 调用kv执行删除操作
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -103,7 +103,7 @@ func (jobMgr *JobMgr) DelJob(name string) (oldJobs []common.Job, err error) {
 // 获取所有的任务
 func (jobMgr *JobMgr) GetAllJob() (jobs []common.Job, err error) {
 	// Jobkey前缀
-	jobKey := "/cron/jobs/"
+	jobKey := common.JOB_SAVE_DIR
 
 	// 获取所有的任务
 	var getResp *clientv3.GetResponse
@@ -121,6 +121,28 @@ func (jobMgr *JobMgr) GetAllJob() (jobs []common.Job, err error) {
 			return
 		}
 		jobs = append(jobs, job)
+	}
+
+	return
+}
+
+// 杀死任务
+func (jobMgr *JobMgr) KillJob(name string) (err error) {
+	// 构建etcd的key
+	jobKey := common.JOB_KILLER_DIR + name
+
+	// 让worker监控到一次put操作，利用租约设定killer的自动过期时间
+	leaseResp, err := jobMgr.lease.Grant(context.Background(), 1)
+	if err != nil {
+		return
+	}
+
+	// 获取租约id
+	leaseID := leaseResp.ID
+
+	// kv put操作
+	if _, err = jobMgr.kv.Put(context.Background(), jobKey, "", clientv3.WithLease(leaseID)); err != nil {
+		return
 	}
 
 	return

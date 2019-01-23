@@ -138,6 +138,42 @@ ERR:
 	return
 }
 
+// 杀死任务 利用etcd的watch功能实现，通知机制
+func handlerJobKill(resp http.ResponseWriter, req *http.Request) {
+	var (
+		err     error
+		jobName string
+		bytes   []byte
+	)
+	// 获取表单
+	if err = req.ParseForm(); err != nil {
+		goto ERR
+	}
+
+	jobName = req.PostForm.Get("name")
+
+	// 杀死任务
+	if err = G_jobMgr.KillJob(jobName); err != nil {
+		goto ERR
+	}
+
+	log.Infof("kill job %v success", jobName)
+
+	if bytes, err = common.BuildResponse(0, "success", nil); err == nil {
+		resp.Write(bytes)
+	}
+
+	return
+
+ERR:
+	log.Error("handle kill job err: %v", err)
+	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
+		resp.Write(bytes)
+	}
+
+	return
+}
+
 // 初始化服务
 func InitApiServer() (err error) {
 	// 配置路由
@@ -145,6 +181,7 @@ func InitApiServer() (err error) {
 	mux.HandleFunc("/job/save", handleJobSave)
 	mux.HandleFunc("/job/delete", handleJobDel)
 	mux.HandleFunc("/job/list", handleJobList)
+	mux.HandleFunc("/job/kill", handlerJobKill)
 
 	// 启动TCP监听
 	var listener net.Listener
