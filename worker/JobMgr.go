@@ -47,10 +47,18 @@ func InitJobMgr() (err error) {
 		watcher: watcher,
 	}
 
+	// 启动监听jobs
+	log.Info("start worker job watch")
+	G_jobMgr.WatchJobs()
+
+	// 启动监听killer
+	log.Info("start killer job watch")
+	G_jobMgr.WatchKiller()
+
 	return
 }
 
-// 监听任务的变化
+// 监听jobs任务的变化
 func (jobMgr *JobMgr) WatchJobs() (err error) {
 	// 1、get一下/cron/jobs/目录下的所有任务， 并且获知当前集群的version
 	getResponse, err := jobMgr.kv.Get(context.Background(), common.JOB_SAVE_DIR, clientv3.WithPrefix())
@@ -104,6 +112,39 @@ func (jobMgr *JobMgr) WatchJobs() (err error) {
 			}
 		}
 	}()
+
+	return
+}
+
+// 监听killer任务的变化
+func (jobMgr *JobMgr) WatchKiller() {
+	// 从当前版本，监听/cron/killer目录的所有变化
+	go func() {
+		// 启动监听,/cron/killer/目录的后续变化
+		WatchChan := G_jobMgr.watcher.Watch(context.Background(), common.JOB_KILLER_DIR, clientv3.WithPrefix())
+
+		// 处理监听事件 判定事件类型
+		var jobEvent *common.JobEvent
+		for watchResp := range WatchChan {
+			for _, watchEvent := range watchResp.Events {
+				switch watchEvent.Type {
+				case mvccpb.PUT: // 杀死任务事件
+					jobName := common.ExtractKillerName(string(watchEvent.Kv.Key))
+					jobEvent = common.BuildJobEvent(common.JOB_EVENT_KILLER, &common.Job{Name: jobName})
+				case mvccpb.DELETE: // killer租约过期，被自动删除
+				}
+
+				// 推送给scheduler
+				G_scheduler.PushJobEvent(jobEvent)
+			}
+		}
+	}()
+}
+
+// 创建任务执行锁
+func (jobMgr *JobMgr) CreateJobLock(jobName string) (jobLock *JobLock) {
+	// 返回一把锁
+	jobLock = InitJobLock(jobName, jobMgr.kv, jobMgr.lease)
 
 	return
 }

@@ -28,17 +28,17 @@ func main() {
 	}
 	log.Info("init config success")
 
-	// 初始化job mgr
-	if err := worker.InitJobMgr(); err != nil {
-		log.Errorf("init job mgr err: %v", err)
-		os.Exit(2)
+	// 启动日志存储
+	if err := worker.InitLogSink(); err != nil {
+		log.Errorf("init log sink err: %v", err)
+		os.Exit(0)
 	}
-	log.Info("init job mgr success")
+	log.Info("init log sink success")
 
 	// 启动执行器
 	if err := worker.InitExecutor(); err != nil {
 		log.Errorf("init executor err: %v", err)
-		os.Exit(3)
+		os.Exit(1)
 	}
 	log.Info("init executor success")
 
@@ -46,9 +46,12 @@ func main() {
 	worker.InitScheduler()
 	log.Infof("init scheduler success")
 
-	// 启动监听进程
-	log.Info("start worker job watch")
-	worker.G_jobMgr.WatchJobs()
+	// 初始化job mgr
+	if err := worker.InitJobMgr(); err != nil {
+		log.Errorf("init job mgr err: %v", err)
+		os.Exit(2)
+	}
+	log.Info("init job mgr success")
 
 	// 阻塞
 	select {}

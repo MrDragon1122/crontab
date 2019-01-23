@@ -52,6 +52,14 @@ func (scheduler *Scheduler) handleJobEvent(jobEvent *common.JobEvent) {
 		if _, ok := scheduler.jobPlanTable[jobEvent.Job.Name]; ok {
 			delete(scheduler.jobPlanTable, jobEvent.Job.Name)
 		}
+	case common.JOB_EVENT_KILLER:
+		// 取消掉command的执行，判定任务是否在执行中
+		if jobExecuteInfo, ok := scheduler.jobExecuingTable[jobEvent.Job.Name]; ok {
+			jobExecuteInfo.CancelFunc() // 取消子进程的运行，任务退出
+			log.Infof("kill job: %v success", jobEvent.Job.Name)
+		} else {
+			log.Infof("job %v not executing", jobEvent.Job.Name)
+		}
 	}
 }
 
@@ -116,7 +124,7 @@ func (scheduler *Scheduler) TryStartJob(jobPlan common.JobSchedulerPlan) {
 	// 执行的任务可能运行很久，1分钟调度60次，但是只能一次，防止并发
 	// 如果任务正在执行，则跳过本次调度
 	if _, ok := scheduler.jobExecuingTable[jobPlan.Job.Name]; ok {
-		log.Infof("%v no execute success，skip this execution", jobPlan.Job.Name)
+		log.Infof("%v not executed success，skip this execution", jobPlan.Job.Name)
 		return
 	}
 
@@ -143,4 +151,25 @@ func (scheduler *Scheduler) handleJobResult(result *common.JobExecuteResult) {
 
 	// 存储执行结果
 	log.Infof("job execute success, output：%v, err: %v", string(result.Output), result.Err)
+
+	if result.Err != common.ERR_LOCK_ALREADY_REQUIRED {
+		jobLog := &common.JobLog{
+			JobName:      result.ExecuteInfo.Job.Name,
+			Command:      result.ExecuteInfo.Job.Command,
+			Output:       string(result.Output),
+			PlanTime:     result.ExecuteInfo.PlanTime.UnixNano() / 1e6,
+			ScheduleTime: result.ExecuteInfo.RealTime.UnixNano() / 1e6,
+			StartTime:    result.StartTime.UnixNano() / 1e6,
+			EndTime:      result.EndTime.UnixNano() / 1e6,
+		}
+
+		if result.Err != nil {
+			jobLog.Err = result.Err.Error()
+		} else {
+			jobLog.Err = ""
+		}
+
+		// TODO: 存储到MongoDB
+		G_logsink.Append(jobLog)
+	}
 }

@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"github.com/gorhill/cronexpr"
+	"golang.org/x/net/context"
 	"strings"
 	"time"
 )
@@ -23,9 +24,11 @@ type JobSchedulerPlan struct {
 
 // 任务执行状态
 type JobExecuteInfo struct {
-	Job      *Job
-	PlanTime time.Time // 理论执行时间
-	RealTime time.Time // 实际执行时间
+	Job        *Job
+	PlanTime   time.Time          // 理论执行时间
+	RealTime   time.Time          // 实际执行时间
+	CommandCtx context.Context    // 用于command的context
+	CancelFunc context.CancelFunc // 用于取消command命令
 }
 
 // http接口应答
@@ -48,6 +51,23 @@ type JobExecuteResult struct {
 	Err         error           // 脚本错误信息
 	StartTime   time.Time       // 启动时间
 	EndTime     time.Time       // 结束时间
+}
+
+// 任务执行日志结果
+type JobLog struct {
+	JobName      string `bson:"jobName"`      // 任务名称
+	Command      string `bson:"command"`      // shell命令
+	Output       string `bson:"output"`       // 执行输出
+	Err          string `bson:"err"`          // err输出
+	PlanTime     int64  `bson:"planTime"`     // 计划调度时间
+	ScheduleTime int64  `bson:"scheduleTime"` // 开始调度时间
+	StartTime    int64  `bson:"startTime"`    // 命令执行开始时间
+	EndTime      int64  `bson:"endTime"`      // 命令执行结束时间
+}
+
+// 日志批次
+type LogBatch struct {
+	Logs []interface{}
 }
 
 // 应答方法
@@ -79,6 +99,11 @@ func Unpack(value []byte) (ret *Job, err error) {
 // /cron/jobs/job10抹掉/cron/jobs/
 func ExtractJobName(jobKey string) (jobName string) {
 	return strings.TrimPrefix(jobKey, JOB_SAVE_DIR)
+}
+
+// 从etcd的key中提取任务名称
+func ExtractKillerName(jobKey string) (jobName string) {
+	return strings.TrimPrefix(jobKey, JOB_KILLER_DIR)
 }
 
 // 任务变化事件有两种，1 更新任务 2 删除任务
@@ -113,5 +138,8 @@ func BuildJobExecuteInfo(jobSchedulerPlan *JobSchedulerPlan) (jobExecuteInfo *Jo
 		PlanTime: jobSchedulerPlan.NextTime,
 		RealTime: time.Now(), // 真实调度时间
 	}
+
+	jobExecuteInfo.CommandCtx, jobExecuteInfo.CancelFunc = context.WithCancel(context.Background())
+
 	return
 }

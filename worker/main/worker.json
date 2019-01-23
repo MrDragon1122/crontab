@@ -3,5 +3,11 @@
   "etcdEndpoints":["127.0.0.1:2379"],
 
   "etcd连接超时":"单位是毫秒",
-  "etcdDialTimeout":5000
+  "etcdDialTimeout":5000,
+
+  "MongoDB地址":"采用mongodb URI",
+  "mongodbUri":"mongodb://127.0.0.1:27017",
+
+  "MongoDB连接超时时间":"单位是毫秒",
+  "mongodbDialTimeout":5000
 }

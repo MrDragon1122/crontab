@@ -49,7 +49,7 @@
     </div>
 </div>
 
-<!--绝对定位 position:fixed-->
+<!--编辑任务模态框 position:fixed-->
 <div id="edit-modal" class="modal fade" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -61,7 +61,7 @@
                 <form>
                     <div class="form-group">
                         <label for="edit-name">任务名称</label>
-                        <input type="text" class="form-control" id="edit-name" placeholder="任务名称">
+                        <input type="text" disabled = "disabled" class="form-control" id="edit-name" placeholder="任务名称">
                     </div>
                     <div class="form-group">
                         <label for="edit-command">shell命令</label>
@@ -76,6 +76,38 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
                 <button type="button" class="btn btn-primary" id="save-job">保存</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!--新建任务模态框 position:fixed-->
+<div id="new-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="modal-name">新建任务</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="edit-name">任务名称</label>
+                        <input type="text" class="form-control" id="edit-newname" placeholder="任务名称">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-command">shell命令</label>
+                        <input type="text" class="form-control" id="edit-newcommand" placeholder="shell命令">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-cronExpr">cron表达式</label>
+                        <input type="text" class="form-control" id="edit-newcronExpr" placeholder="cron表达式">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="save-newjob">保存</button>
             </div>
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
@@ -136,11 +168,24 @@
         // 新建任务
         $("#new-job").on("click", function () {
             // 清空modal
-            $('#edit-name').val("")
-            $('#edit-command').val("")
-            $('#edit-cronExpr').val("")
+            $('#edit-newname').val("")
+            $('#edit-newcommand').val("")
+            $('#edit-newcronExpr').val("")
 
-            $('#edit-modal').modal('show')
+            $('#new-modal').modal('show')
+        })
+        // 保存新建任务
+        $("#save-newjob").on("click",function () {
+            var jobInfo = {name:$('#edit-newname').val(),command:$('#edit-newcommand').val(),cronExpr:$('#edit-newcronExpr').val()}
+            $.ajax({
+                url:'/job/save',
+                type:'post',
+                dataType:'json',
+                data:{job:JSON.stringify(jobInfo)},
+                complete:function () {
+                    window.location.reload()
+                }
+            })
         })
 
         // 2、定义一个函数，用于刷新任务列表
