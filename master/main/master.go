@@ -31,17 +31,24 @@ func main() {
 	}
 	log.Info("init config success")
 
+	// 初始化日志管理器
+	if err := master.InitLogMgr(); err != nil {
+		log.Errorf("init log mgr error: %v", err)
+		os.Exit(2)
+	}
+	log.Info("init log mgr success")
+
 	// 初始化任务管理器
 	if err := master.InitJobMgr(); err != nil {
 		log.Errorf("init job mgr error: %v", err)
-		os.Exit(2)
+		os.Exit(3)
 	}
-	log.Info("init job mgr")
+	log.Info("init job mgr success")
 
 	// 启动Api Http请求
 	if err := master.InitApiServer(); err != nil {
 		log.Errorf("init api server error: %v", err)
-		os.Exit(2)
+		os.Exit(4)
 	}
 	log.Info("init api server success")
 

@@ -174,6 +174,54 @@ ERR:
 	return
 }
 
+// 查询日志
+func handlerJobLog(resp http.ResponseWriter, req *http.Request) {
+	var (
+		bytes []byte
+	)
+
+	// 解析表单
+	if err := req.ParseForm(); err != nil {
+		return
+	}
+
+	// 获取请求参数/job/log?name=job1&skip=0&limit=10  skip 从第几条开始 limit 限制条数
+	name := req.Form.Get("name")
+	skipParam := req.Form.Get("skip")
+	limitParam := req.Form.Get("limit") // 注意表单的哈数
+
+	// 转化为数字
+	skip, err := strconv.ParseInt(skipParam, 10, 64)
+	if err != nil {
+		skip = 0
+	}
+	limit, err := strconv.ParseInt(limitParam, 10, 64)
+	if err != nil {
+		limit = 20
+	}
+
+	// 查询日志list
+	logArr, err := G_logMgr.ListLog(name, &skip, &limit)
+	if err != nil {
+		goto ERR
+	}
+
+	// 构建成功信息
+	log.Infof("job log %v success", name)
+	if bytes, err = common.BuildResponse(0, "success", logArr); err == nil {
+		resp.Write(bytes)
+	}
+	return
+
+ERR:
+	log.Error("handle job log err: %v", err)
+	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
+		resp.Write(bytes)
+	}
+
+	return
+}
+
 // 初始化服务
 func InitApiServer() (err error) {
 	// 配置路由
@@ -182,6 +230,7 @@ func InitApiServer() (err error) {
 	mux.HandleFunc("/job/delete", handleJobDel)
 	mux.HandleFunc("/job/list", handleJobList)
 	mux.HandleFunc("/job/kill", handlerJobKill)
+	mux.HandleFunc("/job/log", handlerJobLog)
 
 	// 知识点：路由匹配时支持最大路由匹配原则
 
