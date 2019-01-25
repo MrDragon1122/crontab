@@ -23,6 +23,7 @@
     <div class="row">
         <div class="col-md-12">
             <button type="button", class="btn btn-primary" id="new-job">新建任务</button>
+            <button type="button", class="btn btn-success" id="list-worker">worker节点</button>
         </div>
     </div>
 
@@ -132,6 +133,31 @@
                         <th>实际调度时间</th>
                         <th>开始执行时间</th>
                         <th>执行结束时间</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!--worker节点模态框 position:fixed-->
+<div id="worker-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="modal-name">worker节点</h4>
+            </div>
+            <div class="modal-body">
+                <table id = "worker-list" class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>节点ip</th>
                     </tr>
                     </thead>
                     <tbody></tbody>
@@ -276,11 +302,36 @@
                 }
             })
 
-
             $('#log-modal').modal('show')
         })
+        // 查看worker节点
+        $("#list-worker").on("click",function (event) {
+            // 清空日志列表
+            $('#worker-list tbody').empty()
 
-        // 2、定义一个函数，用于刷新任务列表
+            $.ajax({
+                url:"/worker/list",
+                dataType:'json',
+                success:function (resp) {
+                    if (resp.errno!= 0){
+                        return
+                    }
+
+                    //遍历日志
+                    var workerList = resp.data
+                    for (var i = 0; i < workerList.length; i++) {
+                        var workerip = workerList[i]
+                        var tr = $('<tr>')
+                        tr.append($('<td>').html(workerip))
+                        $('#worker-list tbody').append(tr)
+                    }
+                }
+            })
+
+            $('#worker-modal').modal('show')
+        })
+
+        // 用于刷新任务列表
         function rebuildJobList() {
             // job/list
             $.ajax({
