@@ -40,17 +40,13 @@ func InitLogSink() (err error) {
 
 // 日志存储协程
 func (logSink *LogSink) writeLoop() {
-	var logBatch *common.LogBatch
+	var logBatch = &common.LogBatch{}
 
 	// 设定5秒自动提交log，不论是否达到条数的阈值
-	timer := time.NewTimer(5 * time.Second)
+	timer := time.NewTimer(1 * time.Second)
 	for {
 		select {
 		case log := <-logSink.logChan:
-			if logBatch == nil {
-				logBatch = &common.LogBatch{}
-			}
-
 			// 插入到日志批次
 			logBatch.Logs = append(logBatch.Logs, log)
 
@@ -59,16 +55,18 @@ func (logSink *LogSink) writeLoop() {
 				// 发送日志
 				logSink.SaveMongoDB(logBatch)
 
-				logBatch = nil
+				logBatch.Logs = logBatch.Logs[:0]
 
 				// 重置定时器,避免重复存储
-				timer.Reset(5 * time.Second)
+				timer.Reset(1 * time.Second)
 			}
 		case <-timer.C:
 			if len(logBatch.Logs) != 0 {
 				logSink.SaveMongoDB(logBatch)
-				logBatch = nil
+				logBatch.Logs = logBatch.Logs[:0]
 			}
+
+			timer.Reset(1 * time.Second)
 		}
 	}
 }

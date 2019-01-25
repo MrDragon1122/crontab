@@ -55,14 +55,14 @@ type JobExecuteResult struct {
 
 // 任务执行日志结果
 type JobLog struct {
-	JobName      string `bson:"jobName"`      // 任务名称
-	Command      string `bson:"command"`      // shell命令
-	Output       string `bson:"output"`       // 执行输出
-	Err          string `bson:"err"`          // err输出
-	PlanTime     int64  `bson:"planTime"`     // 计划调度时间
-	ScheduleTime int64  `bson:"scheduleTime"` // 开始调度时间
-	StartTime    int64  `bson:"startTime"`    // 命令执行开始时间
-	EndTime      int64  `bson:"endTime"`      // 命令执行结束时间
+	JobName      string `json:"jobName" bson:"jobName"`           // 任务名称
+	Command      string `json:"command" bson:"command"`           // shell命令
+	Output       string `json:"output" bson:"output"`             // 执行输出
+	Err          string `json:"err" bson:"err"`                   // err输出
+	PlanTime     int64  `json:"planTime" bson:"planTime"`         // 计划调度时间
+	ScheduleTime int64  `json:"scheduleTime" bson:"scheduleTime"` // 开始调度时间
+	StartTime    int64  `json:"startTime" bson:"startTime"`       // 命令执行开始时间
+	EndTime      int64  `json:"endTime" bson:"endTime"`           // 命令执行结束时间
 }
 
 // 日志批次
@@ -114,6 +114,11 @@ func ExtractJobName(jobKey string) (jobName string) {
 // 从etcd的key中提取任务名称
 func ExtractKillerName(jobKey string) (jobName string) {
 	return strings.TrimPrefix(jobKey, JOB_KILLER_DIR)
+}
+
+// 从etcd的key中提取worker ip
+func ExtractWorkerIp(Key string) (workerIp string) {
+	return strings.TrimPrefix(Key, JOB_WORKER_DIR)
 }
 
 // 任务变化事件有两种，1 更新任务 2 删除任务

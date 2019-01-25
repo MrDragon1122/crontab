@@ -222,6 +222,33 @@ ERR:
 	return
 }
 
+// 输出worker list
+func handleWorkerList(resp http.ResponseWriter, req *http.Request) {
+	var (
+		bytes []byte
+	)
+
+	workerArr, err := G_workerMgr.ListWorkers()
+	if err != nil {
+		goto ERR
+	}
+
+	// 构建成功信息
+	log.Info("get worker list success")
+	if bytes, err = common.BuildResponse(0, "success", workerArr); err == nil {
+		resp.Write(bytes)
+	}
+	return
+
+ERR:
+	log.Error("handle get worker list err: %v", err)
+	if bytes, err = common.BuildResponse(-1, err.Error(), nil); err == nil {
+		resp.Write(bytes)
+	}
+
+	return
+}
+
 // 初始化服务
 func InitApiServer() (err error) {
 	// 配置路由
@@ -231,6 +258,7 @@ func InitApiServer() (err error) {
 	mux.HandleFunc("/job/list", handleJobList)
 	mux.HandleFunc("/job/kill", handlerJobKill)
 	mux.HandleFunc("/job/log", handlerJobLog)
+	mux.HandleFunc("/worker/list", handleWorkerList)
 
 	// 知识点：路由匹配时支持最大路由匹配原则
 
